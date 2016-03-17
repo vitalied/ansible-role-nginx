@@ -1,0 +1,4 @@
+---
+# roles file for vitalied.nginx
+
+- src: vitalied.nginx
