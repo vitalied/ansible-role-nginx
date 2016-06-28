@@ -1,2 +1,48 @@
 ---
 # tasks file for vitalied.nginx
+
+- name: apt-key add for nginx
+  apt_key:
+    url: "{{ nginx_apt_key_url }}"
+    state: present
+  when: not nginx_install_passenger_version
+  tags: vitalied.nginx
+
+- name: apt-key add for nginx passenger module
+  apt_key:
+    keyserver: "{{ nginx_passenger_apt_key_server }}"
+    id: "{{ nginx_passenger_apt_key_id }}"
+    state: present
+  when: nginx_install_passenger_version
+  tags: vitalied.nginx
+
+- name: apt-add-repository
+  apt_repository:
+    filename: "{% if nginx_install_passenger_version %}passenger{% else %}nginx{% endif %}"
+    repo: "{% if nginx_install_passenger_version %}{{ nginx_passenger_add_apt_repo }}{% else %}{{ nginx_add_apt_repo }}{% endif %}"
+    state: present
+  tags: vitalied.nginx
+
+- name: apt-get install
+  apt:
+    name: "{{ item }}"
+    state: latest
+    install_recommends: no
+  with_items: "{% if nginx_install_passenger_version %}{{ nginx_passenger_packages }}{% else %}{{ nginx_packages }}{% endif %}"
+  notify: restart nginx
+  tags: vitalied.nginx
+
+- name: remove default vhosts
+  file:
+    name: "{{ item }}"
+    state: absent
+  with_items: "{{ nginx_default_vhosts }}"
+  notify: restart nginx
+  tags: vitalied.nginx
+
+- name: copy templates
+  template:
+    src: etc/nginx/nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx
+  tags: vitalied.nginx
