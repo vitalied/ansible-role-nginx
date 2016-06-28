@@ -1,0 +1,166 @@
+# {{ ansible_managed }}
+
+user {% if nginx_install_passenger_version %}www-data{% else %}nginx{% endif %};
+
+# This number should be, at maximum, the number of CPU cores on your system.
+worker_processes {{ nginx_worker_processes }};
+
+# Number of file descriptors used for Nginx.
+worker_rlimit_nofile 100000;
+
+pid /run/nginx.pid;
+
+# Only log warn errors.
+# error_log /var/log/nginx/error.log crit;
+error_log /var/log/nginx/error.log warn;
+
+events {
+  # Determines how many clients will be served by each worker process.
+  worker_connections  {{ nginx_worker_connections }};
+
+  # Accept as many connections as possible, after nginx gets notification about a new connection.
+  multi_accept        {{ nginx_multi_accept }};
+
+  # The effective method, used on Linux 2.6+, optmized to serve many clients with each thread.
+  use                 epoll;
+}
+
+http {
+
+  ##
+  # Basic Settings
+  ##
+
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  # Sendfile copies data between one FD and other from within the kernel.
+  sendfile {{ nginx_sendfile }};
+
+  # Causes nginx to attempt to send its HTTP response head in one packet, instead of using partial frames.
+  tcp_nopush {{ nginx_tcp_nopush }};
+
+  # Don't buffer data-sends (disable Nagle algorithm).
+  tcp_nodelay {{ nginx_tcp_nodelay }};
+
+  types_hash_max_size 2048;
+
+  server_tokens off;
+
+  # server_names_hash_bucket_size 64;
+  # server_name_in_redirect off;
+
+  ##
+  # Timeouts
+  ##
+
+  # Timeout for keep-alive connections. Server will close connections after this time.
+  keepalive_timeout {{ nginx_keepalive_timeout }};
+
+  # Number of requests a client can make over the keep-alive connection.
+  keepalive_requests {{ nginx_keepalive_requests }};
+
+  # Allow the server to close the connection after a client stops responding.
+  reset_timedout_connection {{ nginx_reset_timedout_connection }};
+
+  # Send the client a "request timed out" if the body is not loaded by this time.
+  client_body_timeout {{ nginx_client_body_timeout }};
+  # Send the client a "request timed out" if the header is not loaded by this time.
+  client_header_timeout {{ nginx_client_header_timeout }};
+
+  # If the client stops reading data, free up the stale client connection after this much time.
+  send_timeout {{ nginx_send_timeout }};
+
+  ##
+  # Buffers
+  ##
+
+  client_body_buffer_size 16K;
+  client_header_buffer_size 1k;
+  client_max_body_size 8m;
+  large_client_header_buffers 2 8k;
+
+  ##
+  # Caches
+  ##
+
+  # Caches information about open FDs, freqently accessed files.
+  open_file_cache max=100000 inactive=30s;
+  open_file_cache_valid    60s;
+  open_file_cache_min_uses 2;
+  open_file_cache_errors   on;
+
+  ##
+  # SSL Settings
+  ##
+
+  ssl_protocols             TLSv1.2 TLSv1.1 TLSv1; # Dropping SSLv3, ref: POODLE
+  ssl_prefer_server_ciphers on;
+
+  ##
+  # Logging Settings
+  ##
+
+  log_format    main
+                '$remote_addr - $remote_user [$time_local] '
+                '"$request" $status $body_bytes_sent '
+                '"$http_referer" "$http_user_agent" "$gzip_ratio"';
+
+  # Disable access log altogether.
+  access_log off;
+
+  # Log file caching.
+  # access_log /var/log/nginx/access.log main buffer=16k;
+
+  # Only log warn errors.
+  error_log /var/log/nginx/error.log warn;
+
+  ##
+  # Gzip Settings
+  ##
+
+  gzip {{ nginx_gzip }};
+
+  gzip_disable "msie6";
+
+  gzip_vary on;
+  # gzip_proxied any;
+  gzip_proxied expired no-cache no-store private auth;
+  gzip_min_length 256;
+  gzip_comp_level {{ nginx_gzip_comp_level }};
+  gzip_buffers 16 8k;
+  gzip_http_version 1.1;
+  gzip_types text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+
+  {% if nginx_install_passenger_version -%}
+  ##
+  # Phusion Passenger config
+  ##
+
+  passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
+  passenger_ruby /home/{{ ruby_user }}/.rbenv/shims/ruby;
+
+  passenger_log_level 0;
+  passenger_log_file /var/log/nginx/passenger-debug.log;
+
+  passenger_max_pool_size {{ nginx_passenger_max_pool_size }};
+  passenger_min_instances {{ nginx_passenger_min_instances }};
+  passenger_max_instances_per_app {{ nginx_passenger_max_instances_per_app }};
+  passenger_pool_idle_time {{ nginx_passenger_pool_idle_time }};
+  passenger_max_preloader_idle_time {{ nginx_passenger_max_preloader_idle_time }};
+
+  passenger_friendly_error_pages off;
+
+  passenger_app_env production;
+
+  passenger_user {{ ruby_user }};
+  passenger_group {{ ruby_user }};
+  {% endif -%}
+
+  ##
+  # Virtual Host Configs
+  ##
+
+  include /etc/nginx/conf.d/*.conf;
+  include /etc/nginx/sites-enabled/*;
+}
