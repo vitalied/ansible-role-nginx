@@ -1,2 +1,51 @@
 ---
 # defaults file for vitalied.nginx
+
+nginx_apt_key_url: http://nginx.org/keys/nginx_signing.key
+nginx_add_apt_repo: deb http://nginx.org/packages/mainline/ubuntu/ {{ ansible_distribution_release }} nginx
+
+nginx_packages:
+  - nginx
+
+nginx_default_vhosts:
+  - /etc/nginx/conf.d/default.conf
+  - /etc/nginx/sites-enabled/default
+
+nginx_worker_processes: auto
+
+nginx_worker_connections: 1024
+nginx_multi_accept: 'on'
+
+nginx_sendfile: 'on'
+nginx_tcp_nopush: 'on'
+nginx_tcp_nodelay: 'on'
+
+nginx_keepalive_timeout: 65
+nginx_keepalive_requests: 500
+nginx_reset_timedout_connection: 'on'
+nginx_client_body_timeout: 12
+nginx_client_header_timeout: 12
+nginx_send_timeout: 10
+
+nginx_gzip: 'on'
+nginx_gzip_comp_level: 6
+
+
+nginx_install_passenger_version: false
+
+
+nginx_passenger_apt_key_server: keyserver.ubuntu.com
+nginx_passenger_apt_key_id: 561F9B9CAC40B2F7
+nginx_passenger_add_apt_repo: deb https://oss-binaries.phusionpassenger.com/apt/passenger {{ ansible_distribution_release }} main
+
+nginx_passenger_packages:
+  - nginx-extras
+  - passenger
+
+ruby_user: deploy
+
+nginx_passenger_max_pool_size: 8
+nginx_passenger_min_instances: 4
+nginx_passenger_max_instances_per_app: 0
+nginx_passenger_pool_idle_time: 0
+nginx_passenger_max_preloader_idle_time: 0
